@@ -31,14 +31,14 @@
 */
 
 
-WiFi.selectAntenna(ANT_INTERNAL);
+
 
 
 int WDIR = A0;
 int RAIN = D2;
 int WSPEED = D3;
-int VH400 = A1;
-
+int VH400 = A4;
+double SoilHum = 0;
 
 
 //Global Variables
@@ -129,9 +129,9 @@ void wspeedIRQ()
 //---------------------------------------------------------------
 void setup()
 {
-bool WiFi.antennaSelect(EXTERNAL);
+
     
-    
+    pinMode(VH400, INPUT);
     pinMode(D5, OUTPUT);
     digitalWrite(D5, HIGH);
     pinMode(WSPEED, INPUT_PULLUP); // input from wind meters windspeed sensor
@@ -139,7 +139,7 @@ bool WiFi.antennaSelect(EXTERNAL);
 
 
     Serial.begin(9600);   // open serial over USB
-    //Begin posting data immediately instead of waiting for a key press.
+
 
     //Initialize the I2C sensors and ping them
     sensor.begin();
@@ -176,11 +176,17 @@ bool WiFi.antennaSelect(EXTERNAL);
 //---------------------------------------------------------------
 void loop()
 {
+     soilMoisture = analogRead(VH400);
+    SoilHum = map(soilMoisture, 0, 3360, 0, 100);
+
+ Particle.variable("SoilMoist", SoilHum);
+    
   //Keep track of which minute it is
   if(millis() - lastSecond >= 1000)
   {
 
     lastSecond += 1000;
+    
 
     //Take a speed and direction reading every second for 2 minute average
     if(++seconds_2m > 119) seconds_2m = 0;
@@ -236,7 +242,7 @@ void loop()
 void printInfo()
 {
   //This function prints the weather data out to the default Serial Port
-      Serial.print("Wind_Dir:");
+      Particle.variable("Wind_Dir:", winddir);
       switch (winddir)
       {
         case 0:
@@ -325,7 +331,10 @@ void printInfo()
       Serial.print("Soil_Mosit:");
       Serial.println(soilMoisture);
       Particle.variable("Soil_Moist", soilMoisture);
-      Particle.variable("Moist", moist);
+     
+     
+     
+      
       //Mositure Content is expressed ;as an analog
       //value, which can range from 0 (completely dry) to the value of the
       //materials' porosity at saturation. The sensor tends to max out between
@@ -358,6 +367,7 @@ int get_wind_direction()
   if(adc > 1930 && adc < 1950) return (7);//NW
 
   return (-1); // error, disconnected?
+ // Particle.variable("WindDir", String(adc));
 }
 //---------------------------------------------------------------
 //Returns the instataneous wind speed
