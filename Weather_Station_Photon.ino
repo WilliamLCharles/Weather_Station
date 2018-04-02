@@ -3,13 +3,13 @@
 /*
 
 
-    
+
   This code is based on the Wimp Weather Station sketch by Nathan Seidle
   https://github.com/sparkfun/Wimp_Weather_Station,
   as well as Sparkfun's Joel Bartlett.
   https://github.com/sparkfun/Photon_Weather_Shield
-  
-  
+
+
       HTU21D ------------- Photon
       (-) ------------------- GND
       (+) ------------------- 3.3V (VCC)
@@ -31,14 +31,14 @@
 */
 
 
-
+WiFi.selectAntenna(ANT_EXTERNAL);
 
 
 int WDIR = A0;
 int RAIN = D2;
 int WSPEED = D3;
-int VH400 = A4;
-double SoilHum = 0;
+int VH400 = A1;
+
 
 
 //Global Variables
@@ -129,9 +129,9 @@ void wspeedIRQ()
 //---------------------------------------------------------------
 void setup()
 {
+bool WiFi.antennaSelect(EXTERNAL);
 
-    
-    pinMode(VH400, INPUT);
+
     pinMode(D5, OUTPUT);
     digitalWrite(D5, HIGH);
     pinMode(WSPEED, INPUT_PULLUP); // input from wind meters windspeed sensor
@@ -139,7 +139,7 @@ void setup()
 
 
     Serial.begin(9600);   // open serial over USB
-
+    //Begin posting data immediately instead of waiting for a key press.
 
     //Initialize the I2C sensors and ping them
     sensor.begin();
@@ -176,17 +176,11 @@ void setup()
 //---------------------------------------------------------------
 void loop()
 {
-     soilMoisture = analogRead(VH400);
-    SoilHum = map(soilMoisture, 0, 3360, 0, 100);
-
- Particle.variable("SoilMoist", SoilHum);
-    
   //Keep track of which minute it is
   if(millis() - lastSecond >= 1000)
   {
 
     lastSecond += 1000;
-    
 
     //Take a speed and direction reading every second for 2 minute average
     if(++seconds_2m > 119) seconds_2m = 0;
@@ -242,7 +236,7 @@ void loop()
 void printInfo()
 {
   //This function prints the weather data out to the default Serial Port
-      Particle.variable("Wind_Dir:", winddir);
+      Serial.print("Wind_Dir:");
       switch (winddir)
       {
         case 0:
@@ -279,7 +273,7 @@ void printInfo()
       Serial.print(windspeedmph, 1);
       Serial.print("mph, ");
       Particle.variable("Windspeed", windspeedmph);
-      
+
 
       Serial.print("Rain:");
       Serial.print(rainin, 2);
@@ -304,9 +298,9 @@ void printInfo()
       Serial.print("Pressure:");
       Serial.print(pascals/100);
       Serial.print("hPa, ");
-     
+
       Particle.variable("Pressure_hPa", pascals);
-      
+
       Particle.variable("Alt:", altf);
       //The MPL3115A2 outputs the pressure in Pascals. However, most weather stations
       //report pressure in hectopascals or millibars. Divide by 100 to get a reading
@@ -327,14 +321,11 @@ void printInfo()
       Particle.variable("Soil_Temp", soiltempf);
 
 
-   // int moist = analogRead(VH400, 255); 
+   // int moist = analogRead(VH400, 255);
       Serial.print("Soil_Mosit:");
       Serial.println(soilMoisture);
       Particle.variable("Soil_Moist", soilMoisture);
-     
-     
-     
-      
+      Particle.variable("Moist", moist);
       //Mositure Content is expressed ;as an analog
       //value, which can range from 0 (completely dry) to the value of the
       //materials' porosity at saturation. The sensor tends to max out between
@@ -367,7 +358,6 @@ int get_wind_direction()
   if(adc > 1930 && adc < 1950) return (7);//NW
 
   return (-1); // error, disconnected?
- // Particle.variable("WindDir", String(adc));
 }
 //---------------------------------------------------------------
 //Returns the instataneous wind speed
